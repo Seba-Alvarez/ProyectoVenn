@@ -1,0 +1,18 @@
+# Dependencias básicas
+Flask==2.0.1
+Jinja2==3.0.1
+Werkzeug==2.0.1
+python-dotenv==1.0.0
+
+# Para la API de OpenAI
+openai==1.3.0
+requests==2.31.0
+
+# Para manejo de datos
+numpy==1.26.0
+
+# Para pruebas
+pytest==7.4.0
+
+# Para producción
+gunicorn==21.2.0

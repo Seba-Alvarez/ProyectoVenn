@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Diagrama de Venn - Inicio{% endblock %}
+
+{% block content %}
+<section class="container">
+    <div class="welcome-message">
+        <h2>¡Bienvenido al Generador de Diagramas de Venn!</h2>
+        <p>Esta aplicación te permite visualizar expresiones de teoría de conjuntos en diagramas de Venn.</p>
+        <p>Los conjuntos predefinidos son:</p>
+        <ul>
+            <li><strong>Conjunto A:</strong> {1, 4, 6, 7}</li>
+            <li><strong>Conjunto B:</strong> {2, 4, 5, 7}</li>
+            <li><strong>Conjunto C:</strong> {3, 5, 6, 7}</li>
+        </ul>
+    </div>
+    
+    <div class="input-section">
+        <h3>Ingresa una expresión de conjuntos:</h3>
+        <p class="info">Ejemplos: "A or B", "A and B", "(A and B) or (not A and C)"</p>
+        
+        <!-- En el futuro, este formulario enviará la expresión para ser evaluada -->
+        <form id="expression-form">
+            <div class="form-group">
+                <input type="text" id="expression" name="expression" placeholder="Ingresa tu expresión aquí" required>
+                <button type="submit" id="evaluate-btn">Evaluar</button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="result-section">
+        <h3>Resultado:</h3>
+        <div id="venn-diagram">
+            <!-- Aquí se mostrará el diagrama de Venn -->
+            <p class="placeholder-message">El diagrama de Venn se mostrará aquí después de evaluar una expresión.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
