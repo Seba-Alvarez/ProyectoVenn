@@ -39,10 +39,7 @@ class OpenAIClient:
             dict: Un diccionario con los resultados de la evaluación.
                 {
                     'valida': bool,
-                    'error': str o None,
-                    'elementos': list,
-                    'regiones': list,
-                    'explicacion': str
+                    'mensaje': str
                 }
         """
         # Definir los conjuntos
