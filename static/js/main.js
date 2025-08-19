@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         vennDiagram.innerHTML = `
                             <div class="result-container">
                                 <div class="svg-container">
-                                    ${data.svg}
+                                    <--! ${data.svg} -->
                                 </div>
                                 <div class="result-info">
                                     <h4>Resultado:</h4>

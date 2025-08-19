@@ -54,7 +54,7 @@ def evaluate_expression():
     if not expression:
         return jsonify({
             'success': False,
-            'error': 'La expresión no puede estar vacía',
+            'mensaje': 'La expresión no puede estar vacía',
             'elementos': [],
             'regiones': [],
             'explicacion': 'Por favor, proporciona una expresión no vacía'
@@ -64,25 +64,19 @@ def evaluate_expression():
         # Evaluar la expresión utilizando el cliente de OpenAI
         result = openai_client.evaluate_expression(expression)
         
-        # Generar el SVG del diagrama de Venn
-        svg = venn_diagram.generate_svg(result.get('regiones', []), result.get('elementos', []))
-        
-        # Añadir el SVG al resultado
-        result['svg'] = svg
-        
         # Convertir 'valida' a 'success' para mantener consistencia en la API
         result['success'] = result.pop('valida', False)
+        result['mensaje'] = result.get('mensaje', 'Evaluación completada')
         
         return jsonify(result)
         
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Error al evaluar la expresión: {str(e)}',
+            'mensaje': f'Error al evaluar la expresión: {str(e)}',
             'elementos': [],
             'regiones': [],
             'explicacion': 'Ocurrió un error al procesar la solicitud',
-            'svg': venn_diagram.generate_svg([], [])
         }), 500
 
 if __name__ == '__main__':
