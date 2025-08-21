@@ -39,26 +39,84 @@ class OpenAIClient:
             dict: Un diccionario con los resultados de la evaluación.
                 {
                     'valida': bool,
-                    'error': str o None,
-                    'elementos': list,
-                    'regiones': list,
-                    'explicacion': str
+                    'mensaje': str
                 }
         """
-        # Definir los conjuntos
-        conjunto_a = {1, 4, 6, 7}
-        conjunto_b = {2, 4, 5, 7}
-        conjunto_c = {3, 5, 6, 7}
+        
+        system_prompt = """Eres un validador especializado en sintaxis de expresiones lógicas proposicionales. Tu tarea es evaluar si una expresión lógica está sintácticamente correcta.
+
+        REGLAS DE SINTAXIS VÁLIDA:
+        1. Las proposiciones son letras individuales (A, B, C, etc.) o palabras
+        2. Los operadores válidos son: 'and', 'or', 'not' (en minúsculas)
+        3. El operador 'not' es unario y debe preceder a una proposición o expresión entre paréntesis
+        4. Los operadores 'and' y 'or' son binarios y requieren proposiciones/expresiones a ambos lados
+        5. Los paréntesis deben estar balanceados y contener expresiones válidas
+        6. No pueden haber dos operadores binarios consecutivos
+        7. Una expresión no puede empezar o terminar con 'and' u 'or'
+
+        EJEMPLOS DE EXPRESIONES VÁLIDAS:
+        - "A"
+        - "A or B"
+        - "A and B"
+        - "not A"
+        - "(A or B) and C"
+        - "not (A and B)"
+        - "A and (B or C)"
+        - "(A and B) or (C and D)"
+        - "not A or B"
+        - "not (not A)"
+
+        EJEMPLOS DE EXPRESIONES INVÁLIDAS:
+        - "A or and B" → Dos operadores consecutivos
+        - "A or" → Operador binario sin operando derecho
+        - "or A" → Operador binario sin operando izquierdo
+        - "A B" → Falta operador entre proposiciones
+        - "(A or B" → Paréntesis no balanceados
+        - "A and and B" → Operadores duplicados
+        - "not" → Operador 'not' sin operando
+        - "A not B" → 'not' mal posicionado
+        - "() and A" → Paréntesis vacíos
+        - "A or B)" → Paréntesis no balanceados
+
+        FORMATO DE RESPUESTA OBLIGATORIO:
+        Debes responder ÚNICAMENTE con un objeto JSON válido, sin texto adicional, comentarios ni formato markdown:
+
+        Si la expresión es válida:
+        {
+            "valida": true,
+            "mensaje": "La expresion es correcta."
+        }
+
+        Si la expresión es inválida:
+        {
+            "valida": false,
+            "mensaje": "[Descripción específica del error]"
+        }
+
+        MENSAJES DE ERROR ESPECÍFICOS:
+        - Para operadores consecutivos: "Error de sintaxis: operadores consecutivos 'X' y 'Y' en la posición N"
+        - Para paréntesis no balanceados: "Error de sintaxis: paréntesis no balanceados"
+        - Para operador binario sin operando: "Error de sintaxis: el operador 'X' requiere operandos a ambos lados"
+        - Para proposiciones sin operador: "Error de sintaxis: falta operador entre proposiciones"
+        - Para 'not' mal usado: "Error de sintaxis: el operador 'not' debe preceder a una proposición o expresión"
+        - Para paréntesis vacíos: "Error de sintaxis: paréntesis vacíos"
+
+        IMPORTANTE:
+        - Evalúa SOLO la sintaxis, NO el valor de verdad
+        - Responde SOLO con el JSON, sin explicaciones adicionales
+        - El mensaje de éxito debe ser SIEMPRE exactamente: "La expresion es correcta."
+        - Sé específico en los mensajes de error indicando qué está mal"""
+        
         
         # Crear el prompt para la API
-        prompt = self._create_prompt(expression, conjunto_a, conjunto_b, conjunto_c)
+        prompt = self._create_prompt(expression)
         
         try:
             # Preparar la solicitud
             payload = {
                 "model": self.model,
                 "messages": [
-                    {"role": "system", "content": "Eres un asistente especializado en teoría de conjuntos."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 "temperature": 0.1,
@@ -88,19 +146,13 @@ class OpenAIClient:
             # Manejar errores de la API
             return {
                 'valida': False,
-                'error': f"Error al comunicarse con la API de OpenAI: {str(e)}",
-                'elementos': [],
-                'regiones': [],
-                'explicacion': "Ocurrió un error al evaluar la expresión. Por favor, inténtalo de nuevo."
+                'mensaje': f"Error al comunicarse con la API de OpenAI: {str(e)}"
             }
         except Exception as e:
             # Manejar otros errores
             return {
                 'valida': False,
-                'error': f"Error inesperado: {str(e)}",
-                'elementos': [],
-                'regiones': [],
-                'explicacion': "Ocurrió un error inesperado. Por favor, inténtalo de nuevo."
+                'mensaje': f"Error inesperado: {str(e)}"
             }
     
     def _process_response(self, response_text, expression):
@@ -119,121 +171,51 @@ class OpenAIClient:
             result = json.loads(response_text)
             
             # Verificar que la respuesta tiene la estructura esperada
-            required_keys = ['valida', 'error', 'elementos', 'regiones', 'explicacion']
+            required_keys = ['valida', 'mensaje']
             for key in required_keys:
                 if key not in result:
                     return {
                         'valida': False,
-                        'error': f"La respuesta de la API no contiene el campo '{key}'",
-                        'elementos': [],
-                        'regiones': [],
-                        'explicacion': "La respuesta de la API no tiene el formato esperado."
+                        'mensaje': f"La respuesta de la API no contiene el campo '{key}'"
                     }
             
             # Validar y convertir los tipos de datos
             result['valida'] = bool(result['valida'])
-            
-            if not isinstance(result['elementos'], list):
-                result['elementos'] = []
-                
-            if not isinstance(result['regiones'], list):
-                result['regiones'] = []
-            
-            # Asegurarse de que los elementos son números
-            result['elementos'] = [int(elem) if isinstance(elem, (int, str)) and str(elem).isdigit() else elem for elem in result['elementos']]
-            
+            result['mensaje'] = str(result['mensaje'])
+        
+        
             return result
             
         except json.JSONDecodeError:
             # Error al parsear el JSON
             return {
                 'valida': False,
-                'error': "La respuesta de la API no es un JSON válido",
-                'elementos': [],
-                'regiones': [],
-                'explicacion': f"No se pudo procesar la respuesta para la expresión '{expression}'."
+                'mensaje': "La respuesta de la API no es un JSON válido"
             }
         except Exception as e:
             # Otros errores
             return {
                 'valida': False,
-                'error': f"Error al procesar la respuesta: {str(e)}",
-                'elementos': [],
-                'regiones': [],
-                'explicacion': f"Ocurrió un error al procesar la respuesta para la expresión '{expression}'."
+                'mensaje': f"Error al procesar la respuesta: {str(e)}"
             }
     
-    def _create_prompt(self, expression, conjunto_a, conjunto_b, conjunto_c):
+    def _create_prompt(self, expression):
         """
         Crea el prompt para enviar a la API de OpenAI.
         
         Args:
             expression (str): La expresión a evaluar.
-            conjunto_a (set): El conjunto A.
-            conjunto_b (set): El conjunto B.
-            conjunto_c (set): El conjunto C.
             
         Returns:
             str: El prompt para la API.
         """
-        # Convertir los conjuntos a listas ordenadas para mejor visualización
-        a_list = sorted(list(conjunto_a))
-        b_list = sorted(list(conjunto_b))
-        c_list = sorted(list(conjunto_c))
-        
-        # Mapeo de regiones a elementos
-        region_elements = {
-            "A∩¬B∩¬C": [1],           # Solo A
-            "¬A∩B∩¬C": [2],           # Solo B
-            "¬A∩¬B∩C": [3],           # Solo C
-            "A∩B∩¬C": [4],            # A y B, no C
-            "A∩¬B∩C": [6],            # A y C, no B
-            "¬A∩B∩C": [5],            # B y C, no A
-            "A∩B∩C": [7]              # A, B y C
-        }
         
         # Crear el prompt
         prompt = f"""
-Evalúa la siguiente expresión de teoría de conjuntos y determina qué elementos y regiones de un diagrama de Venn cumplen con la expresión.
-
-## Conjuntos Definidos
-- Conjunto A: {a_list}
-- Conjunto B: {b_list}
-- Conjunto C: {c_list}
+Evalúa la siguiente expresión de teoría de conjuntos y determina si es sintácticamente correcta:
 
 ## Expresión a Evaluar
 {expression}
-
-## Regiones del Diagrama de Venn y sus Elementos
-1. A∩¬B∩¬C (elementos que están solo en A): {region_elements["A∩¬B∩¬C"]}
-2. ¬A∩B∩¬C (elementos que están solo en B): {region_elements["¬A∩B∩¬C"]}
-3. ¬A∩¬B∩C (elementos que están solo en C): {region_elements["¬A∩¬B∩C"]}
-4. A∩B∩¬C (elementos que están en A y B, pero no en C): {region_elements["A∩B∩¬C"]}
-5. A∩¬B∩C (elementos que están en A y C, pero no en B): {region_elements["A∩¬B∩C"]}
-6. ¬A∩B∩C (elementos que están en B y C, pero no en A): {region_elements["¬A∩B∩C"]}
-7. A∩B∩C (elementos que están en A, B y C): {region_elements["A∩B∩C"]}
-
-## Instrucciones
-1. Analiza la expresión "{expression}" utilizando los conjuntos definidos.
-2. Determina qué elementos del universo cumplen con la expresión.
-3. Identifica qué regiones del diagrama de Venn deben colorearse (usa la notación exacta: "A∩¬B∩¬C", "¬A∩B∩¬C", etc.).
-4. Si la expresión tiene errores de sintaxis o no es válida, proporciona un mensaje de error claro.
-
-## Operadores Permitidos
-- "and" o "∩" para la intersección
-- "or" o "∪" para la unión
-- "not" o "¬" para el complemento
-- Paréntesis "(" y ")" para agrupar expresiones
-
-## Formato de Respuesta
-Responde ÚNICAMENTE en formato JSON con la siguiente estructura exacta:
-{{
-  "valida": true/false,
-  "error": "Mensaje de error si la expresión no es válida, null si es válida",
-  "elementos": [lista de elementos que cumplen con la expresión],
-  "regiones": [lista de regiones que deben colorearse usando la notación exacta],
-  "explicacion": "Breve explicación del resultado"
-}}
 """
         
         return prompt
