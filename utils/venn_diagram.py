@@ -4,22 +4,25 @@ Este módulo se encargará de crear representaciones SVG de diagramas de Venn
 basados en las regiones que deben colorearse según la expresión evaluada.
 """
 
+import re
+
 class VennDiagram:
     """Generador de diagramas de Venn."""
     
     def __init__(self):
         """Inicializa el generador de diagramas de Venn."""
         # Definir los conjuntos
-        self.conjunto_a = {1, 4, 6, 7}
-        self.conjunto_b = {2, 4, 5, 7}
-        self.conjunto_c = {3, 5, 6, 7}
+        self.conjunto_a = {1, 3, 5, 7}
+        self.conjunto_b = {2, 3, 6, 7}
+        self.conjunto_c = {4, 5, 6, 7}
+        self.conjunto_u = {1,2,3,4,5,6,7}
         
         # Mapeo de regiones a IDs
         self.region_mapping = {
             'A∩¬B∩¬C': 'region-1',  # Solo A
             '¬A∩B∩¬C': 'region-2',  # Solo B
-            '¬A∩¬B∩C': 'region-3',  # Solo C
-            'A∩B∩¬C': 'region-4',   # A y B, no C
+            'A∩B∩¬C': 'region-3',   # A y B, no C
+            '¬A∩¬B∩C': 'region-4',  # Solo C
             'A∩¬B∩C': 'region-5',   # A y C, no B
             '¬A∩B∩C': 'region-6',   # B y C, no A
             'A∩B∩C': 'region-7'     # A, B y C
@@ -29,13 +32,85 @@ class VennDiagram:
         self.region_elements = {
             'A∩¬B∩¬C': {1},           # Solo A
             '¬A∩B∩¬C': {2},           # Solo B
-            '¬A∩¬B∩C': {3},           # Solo C
-            'A∩B∩¬C': {4},            # A y B, no C
-            'A∩¬B∩C': {6},            # A y C, no B
-            '¬A∩B∩C': {5},            # B y C, no A
+            'A∩B∩¬C': {3},            # A y B, no C
+            '¬A∩¬B∩C': {4},           # Solo C
+            'A∩¬B∩C': {5},            # A y C, no B
+            '¬A∩B∩C': {6},            # B y C, no A
             'A∩B∩C': {7}              # A, B y C
         }
     
+    def  calcular_regiones(self, expresion):
+        norm = self.tokenize(expresion)
+        reg = eval(norm)
+        return reg
+
+    def tokenize(self, s: str):
+        print(f"Tokenizando expresión: {s}")
+        # normalizamos operadores verbales y símbolos
+        replacements = {
+            'or': ' | ',
+            'and': ' & ',
+            'not': ' U - ',
+            'A': 'self.conjunto_a',
+            'B': 'self.conjunto_b',
+            'C': 'self.conjunto_c'
+        }
+
+        for k, v in replacements.items():
+            s = s.replace(k, v)
+        
+        return s
+        
+
+    def parse(self, expresion: str):
+        exp = self.tokenize(expresion)
+        return exp
+        #result = self.parse_union(expresion)
+        #if self.peek() is not None:
+        #    raise ValueError(f"Entrada sobrante a partir de: {self.peek()}")
+        #return result
+
+    def parse_union(self, expresion: str):
+        left = self.parse_diff(expresion)
+        while self.peek() == 'OR':
+            self.take('OR')
+            right = self.parse_diff()
+            left = left | right
+        return left
+
+
+
+
+def main():
+    # Crear el objeto VennDiagram
+    diagrama = VennDiagram()
+    
+    # Ejemplo de expresión (puedes cambiarla según tu lógica)
+    expresion = "A or B"
+    
+    # Llamar al método calcular_regiones
+    resultado = diagrama.calcular_regiones(expresion)
+    
+    # Imprimir el resultado (debería ser None porque el método está vacío)
+    print("Resultado de calcular_regiones:", resultado)
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     def generate_svg(self, colored_regions=None, elements=None):
         """
         Genera un diagrama de Venn en formato SVG.
