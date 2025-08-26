@@ -28,6 +28,8 @@ class VennDiagram:
             'A∩B∩C': 'region-7'     # A, B y C
         }
         
+        #para ver si funciona
+
         # Mapeo de regiones a elementos
         self.region_elements = {
             'A∩¬B∩¬C': {1},           # Solo A
